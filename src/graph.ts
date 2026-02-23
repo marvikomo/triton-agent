@@ -33,6 +33,7 @@ export const graph = new StateGraph(AgentState)
    .addNode("orchestrate", orchestrationNode.execute.bind(orchestrationNode))
 //   .addNode("validate", ValidateNode)
 //   .addNode("respond", RespondNode)
+  .addNode("orchestrate_router", shouldContinueOrchestration)
   .addEdge(START, "intake")
    .addEdge("intake", "plan")
 //    .addEdge("plan", "reason")
@@ -42,7 +43,8 @@ export const graph = new StateGraph(AgentState)
 //   .addEdge("design", "validate")
 //   .addConditionalEdges("validate", shouldRetry) // ← the retry loop
 //   .addEdge("design", END)
-.addConditionalEdges("orchestrate", shouldContinueOrchestration, {
-    orchestrate: "orchestrate",
-    end: END,
-})
+// .addConditionalEdges("orchestrate", shouldContinueOrchestration, {
+//     orchestrate: "orchestrate",
+//     end: END,
+// })
+.addEdge("orchestrate", "orchestrate_router")
