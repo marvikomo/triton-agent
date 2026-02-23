@@ -1,6 +1,7 @@
 import { AIMessage, HumanMessage, isAIMessage, ToolMessage } from "@langchain/core/messages";
 import { AgentState } from "../states";
 import { todoTools } from "../tools/todo-tools";
+import { Command } from "@langchain/langgraph";
 
 
 export class OrchestrationNode {
@@ -22,7 +23,7 @@ export class OrchestrationNode {
             decisions: [],
         }
 
-         console.log("scratch pad", scratchpad)
+        console.log("scratch pad", scratchpad)
         const isFirstRun = state.messages.length === 0;
 
         const systemPrompt = `You are an expert software architect orchestrating an architecture design process.
@@ -37,16 +38,32 @@ export class OrchestrationNode {
             Use your tools to manage your todo list and track progress.
             When all todos are completed, respond with a plain message saying "DONE" — no tool calls.`;
 
+        let messages;
 
-        const messages = isFirstRun ? [
-            new HumanMessage(`${systemPrompt}
+        const pendingTodos = scratchpad.todos.filter(t => t.status !== "completed");
+
+        if (isFirstRun) {
+            messages = [
+                new HumanMessage(`${systemPrompt}
                     The design pipeline has already produced:
                     - blueprintSpec: ${state.blueprintSpec ? 'ready' : 'missing'}
                     - adr: ${state.adr ? 'ready' : 'missing'}
                     - diagram: ${state.diagram ? 'ready' : 'missing'}
 
                     Create a todo list to track validation, review, and any missing steps. Then start working through them.`)
-        ] : state.messages;
+            ];
+        } else if (pendingTodos.length > 0) {
+            messages = [
+                ...state.messages,
+                new HumanMessage(
+                    `There are still ${pendingTodos.length} pending todos:\n${JSON.stringify(pendingTodos, null, 2)}\n\nContinue working through them.`
+                ),
+            ];
+        } else {
+            messages = state.messages;
+        }
+
+
 
         const response = await this.modelWithTools.invoke(messages);
 
@@ -155,19 +172,38 @@ export class OrchestrationNode {
 }
 
 
-export function shouldContinueOrchestration(state: typeof AgentState.State): "orchestrate" | "end" {
+export function shouldContinueOrchestration(state: typeof AgentState.State): Command {
     const messages = state.messages;
-    if (messages.length === 0) return "end";
+    if (messages.length === 0) return new Command({ goto: "__end__" });
+
+    const todos = state.scratchpad?.todos ?? [];
+    const pendingTodos = todos.filter(t => t.status != "completed")
 
     // Find the last AIMessage — tool messages may follow it, skip those
-  const lastAIMessage = [...messages]
-    .reverse()
-    .find(m => AIMessage.isInstance(m)) as AIMessage | undefined;
+    const lastAIMessage = [...messages]
+        .reverse()
+        .find(m => AIMessage.isInstance(m)) as AIMessage | undefined;
 
     console.log("Last AI Message for orchestration decision:", JSON.stringify(lastAIMessage, null, 2))
 
-    if (!lastAIMessage) return "end";
+    if (!lastAIMessage) return new Command({ goto: "__end__" });
 
     const toolCalls = lastAIMessage.tool_calls ?? [];
-    return toolCalls.length > 0 ? "orchestrate" : "end";
+
+    if (toolCalls.length > 0) {
+        return new Command({ goto: "orchestrate" });
+    }
+
+    if (pendingTodos.length > 0) {
+        return new Command({
+            goto: "orchestrate",
+            update: {
+                messages: [
+                    new HumanMessage(`There are still ${pendingTodos.length} pending todos. pending todo(s):\n${JSON.stringify(pendingTodos, null, 2)}\n\n Looping back to orchestration to continue working through them.`)
+                ]
+            }
+        })
+    }
+
+    return new Command({ goto: "__end__" });
 }
