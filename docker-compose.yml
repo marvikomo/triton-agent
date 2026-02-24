@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  triton-agent:
+    image: node:22
+    working_dir: /usr/src/app
+    volumes:
+      - ./:/usr/src/app
+    command: sh -c "npm install && npm run build && npm start"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production

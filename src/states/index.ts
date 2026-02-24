@@ -7,7 +7,7 @@ export const AgentState = Annotation.Root({
     blueprintSpec: Annotation<object>,
     diagram: Annotation<object>,
     scratchpad: Annotation<{
-        todos: Array <{
+        todos: Array<{
             id: string;
             description: string;
             status: 'pending' | 'in-progress' | 'completed' | 'blocked';
@@ -35,7 +35,7 @@ export const AgentState = Annotation.Root({
     validationErrors: Annotation<string[]>,
     retryCount: Annotation<number>,
     sessionHistory: Annotation<object[]>({
-    reducer: (current, next) => [...current, ...next],
-    default: () => [],
-  }),
+        reducer: (current, next) => [...current, ...next],
+        default: () => [],
+    }),
 })
