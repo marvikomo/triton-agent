@@ -110,14 +110,14 @@ export class DesignNode {
 
         Generate a complete diagram based on this ADR.`;
 
-                if (validationErrors) {
-                    prompt += `
+        if (validationErrors) {
+            prompt += `
 
         VALIDATION ERRORS FROM PREVIOUS ATTEMPT:
         ${validationErrors.join('\n')}
 
         Fix these errors in this attempt.`;
-                }
+        }
 
         return prompt;
 
