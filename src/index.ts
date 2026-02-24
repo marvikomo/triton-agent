@@ -13,7 +13,10 @@ async function run() {
 
 const result = await compiledGraph.invoke(
   { userInput: "Design a multi-tenant SaaS API with auth and billing" },
-  { configurable: { thread_id: threadId } }
+  { 
+    configurable: { thread_id: threadId },
+    recursionLimit: 100
+ }
 );
 console.log("Final Result:", JSON.stringify(result.diagram, null, 2));
 

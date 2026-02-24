@@ -1,4 +1,4 @@
-import { AIMessage, HumanMessage, isAIMessage, ToolMessage } from "@langchain/core/messages";
+import { AIMessage, HumanMessage, isAIMessage, SystemMessage, ToolMessage } from "@langchain/core/messages";
 import { AgentState } from "../states";
 import { todoTools } from "../tools/todo-tools";
 import { Command } from "@langchain/langgraph";
@@ -26,7 +26,7 @@ export class OrchestrationNode {
         console.log("scratch pad", scratchpad)
         const isFirstRun = state.messages.length === 0;
 
-        const systemPrompt = `You are an expert software architect orchestrating an architecture design process.
+         const systemMessage = new SystemMessage(`You are an expert software architect orchestrating an architecture design process.
 
             Blueprint: ${JSON.stringify(state.blueprintSpec, null, 2)}
 
@@ -36,36 +36,23 @@ export class OrchestrationNode {
             - Decisions: ${JSON.stringify(scratchpad.decisions, null, 2)}
 
             Use your tools to manage your todo list and track progress.
-            When all todos are completed, respond with a plain message saying "DONE" — no tool calls.`;
+            When all todos are completed, respond with a plain message saying "DONE" — no tool calls.`);
 
         let messages;
 
         const pendingTodos = scratchpad.todos.filter(t => t.status !== "completed");
 
-        if (isFirstRun) {
-            messages = [
-                new HumanMessage(`${systemPrompt}
-                    The design pipeline has already produced:
+         const conversationMessages = state.messages.length === 0
+            ? [new HumanMessage(`The design pipeline has already produced:
                     - blueprintSpec: ${state.blueprintSpec ? 'ready' : 'missing'}
                     - adr: ${state.adr ? 'ready' : 'missing'}
                     - diagram: ${state.diagram ? 'ready' : 'missing'}
 
-                    Create a todo list to track validation, review, and any missing steps. Then start working through them.`)
-            ];
-        } else if (pendingTodos.length > 0) {
-            messages = [
-                ...state.messages,
-                new HumanMessage(
-                    `There are still ${pendingTodos.length} pending todos:\n${JSON.stringify(pendingTodos, null, 2)}\n\nContinue working through them.`
-                ),
-            ];
-        } else {
-            messages = state.messages;
-        }
+                    Create a todo list to track validation, review, and any missing steps. Then start working through them.`)]
+            : state.messages;
 
 
-
-        const response = await this.modelWithTools.invoke(messages);
+         const response = await this.modelWithTools.invoke([systemMessage, ...conversationMessages]);
 
 
         //Apply tool 
