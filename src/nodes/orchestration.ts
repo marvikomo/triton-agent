@@ -2,16 +2,20 @@ import { AIMessage, HumanMessage, isAIMessage, SystemMessage, ToolMessage } from
 import { AgentState } from "../states";
 import { todoTools } from "../tools/todo-tools";
 import { Command } from "@langchain/langgraph";
+import { createSpawnSubAgentTool } from "../tools/sub-agent-tools";
 
 
 export class OrchestrationNode {
 
     private model: any;
     private modelWithTools: any;
+    private allTools: any[];
 
     constructor(model: any) {
         this.model = model;
-        this.modelWithTools = model.bindTools(todoTools)
+        const spawnSubAgentTool = createSpawnSubAgentTool(model);
+        this.allTools = [...todoTools, spawnSubAgentTool];
+        this.modelWithTools = model.bindTools(this.allTools)
     }
 
     async execute(state: typeof AgentState.State) {
@@ -36,13 +40,14 @@ export class OrchestrationNode {
             - Decisions: ${JSON.stringify(scratchpad.decisions, null, 2)}
 
             Use your tools to manage your todo list and track progress.
+            You can spawn specialist sub-agents using spawn_sub_agent for tasks like generating diagrams, security reviews, or gap analysis.
             When all todos are completed, respond with a plain message saying "DONE" — no tool calls.`);
 
         let messages;
 
         const pendingTodos = scratchpad.todos.filter(t => t.status !== "completed");
 
-         const conversationMessages = state.messages.length === 0
+        const conversationMessages = state.messages.length === 0
             ? [new HumanMessage(`The design pipeline has already produced:
                     - blueprintSpec: ${state.blueprintSpec ? 'ready' : 'missing'}
                     - adr: ${state.adr ? 'ready' : 'missing'}
@@ -52,7 +57,7 @@ export class OrchestrationNode {
             : state.messages;
 
 
-         const response = await this.modelWithTools.invoke([systemMessage, ...conversationMessages]);
+        const response = await this.modelWithTools.invoke([systemMessage, ...conversationMessages]);
 
 
         //Apply tool 
