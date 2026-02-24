@@ -1,10 +1,7 @@
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
+import { runSubAgent } from "../subagents";
 
-
-async function runSubAgentLoop(model: any, systemPrompt: string, userPrompt: string) {
-    
-}
 
 export const createSpawnSubAgentTool = (model: any) => {
     return tool(
@@ -35,7 +32,7 @@ export const createSpawnSubAgentTool = (model: any) => {
          const systemPrompt = systemPrompts[agentType] ?? `You are an expert software architect. Complete the given task thoroughly. Use the note tool to track progress and done to return your final result.`;
          try{
 
-            const result = await runSubAgentLoop(model, systemPrompt, task + (context ? `\n\nContext:\n${context}` : ""));
+            const result = await runSubAgent(model, systemPrompt, task + (context ? `\n\nContext:\n${context}` : ""));
 
              return JSON.stringify({
                     agentType,
