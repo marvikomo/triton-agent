@@ -81,7 +81,7 @@ export class OrchestrationNode {
             let toolResult = "";
             try {
 
-                const matchedTool = todoTools.find(tool => tool.name === toolCall.name) as any;
+                const matchedTool = this.allTools.find(tool => tool.name === toolCall.name) as any;
                 if (!matchedTool) throw new Error(`Unknown tool: ${toolCall.name}`);
 
                 toolResult = await matchedTool.invoke(toolCall.args) as string
@@ -126,6 +126,16 @@ export class OrchestrationNode {
                                 reasoning: parsedResult.reasoning,
                                 timestamp: parsedResult.timestamp,
                             }],
+                        };
+                        break;
+                      case "spawn_sub_agent":
+                        console.log(`✅ Sub-agent [${parsedResult.agentType}] completed: ${parsedResult.task}`);
+                        updatedScratchpad = {
+                            ...updatedScratchpad,
+                            observations: [
+                                ...updatedScratchpad.observations,
+                                `[sub-agent:${parsedResult.agentType}] ${JSON.stringify(parsedResult.result)}`,
+                            ],
                         };
                         break;
                 }
